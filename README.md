@@ -41,7 +41,7 @@ _원본_
 </script>
 ```
 
-### React 구조를 이해하기 위한 UI를 어려게 그려본다.
+### React 구조를 이해하기 위한 UI를 어렵게 그려본다.
 
 ~~아무도 이렇게 사용하지 않는다. JSX를 사용하지~~
 
@@ -207,10 +207,218 @@ function App() {
 ReactDOM.render(<App />, root);
 ```
 
-<!-- -
+## converter 만들기
 
--
--
+```javascript
+function MinitesToHours() {
+  const [amount, setAmount] = React.useState(0);
+  const [inverted, setInverted] = React.useState(false);
+  const onChange = (event) => {
+    setAmount(event.target.value);
+  };
+  const reset = () => setAmount(0);
+  const onInverted = () => {
+    reset();
+    setInverted((current) => !current);
+  };
+  return (
+    <div>
+      <div>
+        <label htmlFor="minutes">Minutes</label>
+        <input
+          value={inverted ? amount * 60 : amount}
+          id="minutes"
+          placehoder="Minutes"
+          type="number"
+          onChange={onChange}
+          disabled={inverted}
+        />
+      </div>
+      <div>
+        <label htmlFor="hours">Hours</label>
+        <input
+          value={inverted ? amount : Math.round(amount / 60)}
+          id="hours"
+          placehoder="Hours"
+          type="number"
+          onChange={onChange}
+          disabled={!inverted}
+        />
+        <button onClick={reset}>reset</button>
+        <button onClick={onInverted}>
+          {inverted ? "Turn back" : "Invert"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
-const array = [0,1,2,3]
-const [a, b, c, d] = array -->
+function KmToMiles() {
+  const [amount, setAmount] = React.useState(0);
+  const [inverted, setInverted] = React.useState(false);
+  const onChange = (event) => {
+    setAmount(event.target.value);
+  };
+  const reset = () => setAmount(0);
+  const onInverted = () => {
+    reset();
+    setInverted((current) => !current);
+  };
+  return (
+    <div>
+      <div>
+        <label htmlFor="km">KM</label>
+        <input
+          value={inverted ? Math.round(amount / 1000) : amount}
+          id="km"
+          placehoder="KM"
+          type="number"
+          onChange={onChange}
+          disabled={inverted}
+        />
+      </div>
+      <div>
+        <label htmlFor="meter">Meter</label>
+        <input
+          value={inverted ? amount : amount * 1000}
+          id="meter"
+          placehoder="Meter"
+          type="number"
+          onChange={onChange}
+          disabled={!inverted}
+        />
+        <button onClick={reset}>reset</button>
+        <button onClick={onInverted}>
+          {inverted ? "Turn back" : "Invert"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [index, setIndex] = React.useState("xx");
+  const onSelect = (event) => {
+    setIndex(event.target.value);
+  };
+  return (
+    <div>
+      <h1 className="hi">Super Converter</h1>
+      <select value={index} onChange={onSelect}>
+        <option value="xx">Select your units</option>
+        <option value="0">Minutes & Hours</option>
+        <option value="1">Km & Miles</option>
+      </select>
+      <hr />
+      {index === "xx" ? "Please select your units" : null}
+      {index === "0" ? <MinitesToHours /> : null}
+      {index === "1" ? <KmToMiles /> : null}
+    </div>
+  );
+}
+
+const root = document.getElementById("root");
+ReactDOM.render(<App />, root);
+```
+
+## component 재사용
+
+`component` : 어떤 jsx를 반환하는 함수로 재사용이 가능하다.
+
+### Property : props(인자)
+
+> 부모 컴포넌트에서 자식 컴포넌트에 데이터를 보낼 수 있게 해주는 방식(통로)
+> 컴포넌트 설정을 할 수 있다
+> 자동으로 모든 property를 모조리 오브젝트 안에 넣는다. 이 오브젝트는 컴포넌트의 첫번째 인자(두번째 인자는 없음)로 주어진다.
+
+**문법**
+
+```javascript
+function Btn(props) {
+  {
+    props.text;
+  }
+}
+
+<Btn text="Save Changes" x={false} />;
+```
+
+```javascript
+// 0
+function Btn({ text, big, changeValue }) {
+  return (
+    <button
+      onClick={changeValue}
+      style={{
+        backgroundColor: "tomato",
+        color: "white",
+        padding: "10px 20px",
+        borderRadius: 10,
+        border: 0,
+        fontSize: big ? 18 : 16,
+      }}
+    >
+      {text}
+    </button>
+  );
+}
+
+<div>
+  // 1
+  <Btn text={value} big={true} changeValue={changeValue} />
+  // 2
+  <Btn text="Continued" big={false} />
+</div>;
+```
+
+- 0을 꼭 써줘야만 함, `fontSize = 14`로 초기화도 가능하다.
+- 함수도 `props`이 될 수 있다. `changeValue`은 `addEventListener`가 아니고 `props`이다!
+
+#### React Memo
+
+부모 컴포넌트에 어떤 `props` 상태 변경이라도 있으면 자식들은 다시 그려진다(앱이 느려짐)
+상태 변경이 없는 자식은 다시 그리지 말라고 해야함
+
+위의 `1`의 props는 state와 연결되어 있으므로 다시 그리라고 요청(두 번 랜더링)
+위의 `2`의 props는 다시 그리지 말라고 요청 (초기만 랜더링)
+
+아래와 같이 `React.memo()`를 사용하면 필요 없는 상태변경은 하지 않아도 된다.
+
+```javascript
+const MemorizedBtn = React.memo(Btn);
+
+<div>
+  <MemorizedBtn text={value} changeValue={changeValue} />
+  <MemorizedBtn text="Continued" />
+</div>;
+```
+
+#### props type
+
+어떤 타입의 props를 받고 있는지 체크
+
+**설치**
+
+```javascript
+<script src="https://unpkg.com/prop-types@15.7.2/prop-types.js"></script>;
+
+Btn.propTypes = {
+  text: PropTypes.string.isRequired,
+  fontSize: PropTypes.number,
+};
+```
+
+> `text`는 문자열이어야 하며 필수다
+> `fontSize`는 숫자여야 한다
+
+오류나면 production을 development로 바꿔야 한다.
+
+```
+<script
+  crossorigin
+  src="https://unpkg.com/react@17.0.2/umd/react.development.js"
+></script>
+```
+
+// const array = [0,1,2,3]
+// const [a, b, c, d] = array
